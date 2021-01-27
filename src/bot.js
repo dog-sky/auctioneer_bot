@@ -12,7 +12,6 @@ const apiMedia = process.env.API_MEDIA
 let userServer = null
 
 bot.start( ctx => ctx.reply(`Привет ${ctx.from.first_name}! Введи команду /commandLine для получения панели команд.`))
-bot.help( ctx => ctx.reply(''))
 
 bot.command('commandLine', ({ reply }) =>
     reply('Панель команд', Markup
