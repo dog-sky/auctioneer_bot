@@ -12,9 +12,6 @@
   "dependencies": {
     "axios": "^0.21.1",
     "dotenv": "^8.2.0",
-    "jquery": "^3.5.1",
-    "node-telegram-bot-api": "0.50.0",
-    "telegraf": "^3.38.0",
-    "xmlhttprequest": "^1.8.0"
+    "telegraf": "^3.38.0"
   }
 }

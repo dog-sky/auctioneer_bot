@@ -1,4 +1,4 @@
-FROM node:14
+FROM node:15-alpine3.12
 
 ARG API_KEY_BOT
 ARG API_URL
