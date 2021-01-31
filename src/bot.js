@@ -23,6 +23,7 @@ let userServer = null
 bot.start(ctx => ctx.reply(
     'Установи сервер для поиска, затем используй, затем ищи предмет на аукционе',
     Markup.keyboard(SERVER_LIST.serverList, { columns: 2 }).oneTime().resize().extra()
+    // МАЛОЙ ВОТ ТУТ НАДО ПОТОМ СРАЗУ ПАРСИТЬ ТЕКСТ ОТ ПОЛЬЗОВАТЕЛЯ И ПОЛУЧИТЬ СЕРВЕР, ЧТО ОН УСТАНОВИЛ, НО У МЕНЯ ЛАПКИ В НОДЕ
     )
 )
 
@@ -33,7 +34,7 @@ bot.command('setServer', ({ reply }) =>
     )
 )
 
-bot.hears('auction', (line) => {
+bot.command('auction', (line) => {
     const infoText = userServer ? 'Введите название предмета' : 'Выбирите сервер через команду /setServer'
     line.replyWithMarkdown(infoText);
     bot.on("text", async (ctx) => {
@@ -112,17 +113,4 @@ const getAucData = async (url) => {
     }
 }
 
-bot.launch(
-    ctx => ctx.reply(
-        `
-        Привет ${ctx.from.first_name}!
-
-        Я бот помощник аукциона WoW
-        Я могу:
-            Искать предметы на аукционе World Of Warcraft
-            Показывать их текущую минимальную и максимальную цену
-
-        В будущем смогу создавать уведомления и подписываться на изменение цены для предмета
-        `
-    )
-)
+bot.launch()
