@@ -11,23 +11,25 @@ const apiMedia = process.env.API_MEDIA
 
 let userServer = null
 
-bot.start( ctx => ctx.reply(`Привет ${ctx.from.first_name}! Введи команду /commandLine для получения панели команд.`))
+// bot.start('commandLine', ({ reply }) =>
+//     reply('Панель команд', Markup
+//         .keyboard(['/auction'])
+//         .oneTime()
+//         .resize()
+//         .extra()
+//     )
+// )
 
-bot.command('commandLine', ({ reply }) =>
-    reply('Панель команд', Markup
-        .keyboard(['/auction'])
-        .oneTime()
-        .resize()
-        .extra()
+bot.start(ctx => ctx.reply(
+    'Установи сервер для поиска, затем используй / auction',
+    Markup.keyboard(SERVER_LIST.serverList, { columns: 2 }).oneTime().resize().extra()
     )
 )
 
 bot.command('setServer', ({ reply }) =>
-    reply('Список серверов', Markup
-        .keyboard(SERVER_LIST.serverList, {columns: 2})
-        .oneTime()
-        .resize()
-        .extra()
+    reply(
+        'Список серверов',
+        Markup.keyboard(SERVER_LIST.serverList, { columns: 2 }).oneTime().resize().extra()
     )
 )
 
@@ -80,7 +82,7 @@ bot.command('auction',  (line) => {
                 } else {
                     ctx.reply(`Попробуйте сделать более точный запрос.`)
                     if (uniqItem.length > 1) {
-                        <!-- TODO: список кнопками -->
+                        // <!-- TODO: список кнопками -->
                         // return ctx.reply('Вот что удалось найти', Extra.HTML().markup((m) =>
                         //     m.inlineKeyboard([
                         //         uniqItem.map(item => {
@@ -94,7 +96,6 @@ bot.command('auction',  (line) => {
                 }
             } catch (e) {
                 ctx.reply('Не удалось получить ответ по такому запросу от сервера')
-                ctx.reply(e)
             }
         } else if(!hasServerMess) {
             ctx.reply("Нужно указать сервер через команду /setServer")
@@ -110,4 +111,18 @@ const getAucData = async (url) => {
         throw e;
     }
 }
-bot.launch()
+
+bot.launch(
+    ctx => ctx.reply(
+        `
+        Привет ${ctx.from.first_name}!
+
+        Я бот помощник аукциона WoW
+        Я могу:
+            Искать предметы на аукционе World Of Warcraft
+            Показывать их текущую минимальную и максимальную цену
+
+        В будущем смогу создавать уведомления и подписываться на изменение цены для предмета
+        `
+    )
+)
