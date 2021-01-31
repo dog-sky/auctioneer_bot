@@ -21,7 +21,7 @@ let userServer = null
 // )
 
 bot.start(ctx => ctx.reply(
-    'Установи сервер для поиска, затем используй / auction',
+    'Установи сервер для поиска, затем используй, затем ищи предмет на аукционе',
     Markup.keyboard(SERVER_LIST.serverList, { columns: 2 }).oneTime().resize().extra()
     )
 )
@@ -33,7 +33,7 @@ bot.command('setServer', ({ reply }) =>
     )
 )
 
-bot.command('auction',  (line) => {
+bot.hears('auction', (line) => {
     const infoText = userServer ? 'Введите название предмета' : 'Выбирите сервер через команду /setServer'
     line.replyWithMarkdown(infoText);
     bot.on("text", async (ctx) => {
