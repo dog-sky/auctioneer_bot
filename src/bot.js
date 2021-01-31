@@ -23,8 +23,6 @@ bot.start(({ reply }) =>
 
 bot.on("text", async (ctx) => {
     checkServer(ctx, ctx.message.text)
-    const infoText = userServer ? 'Введите название предмета' : 'Нужно выбрать сервер'
-    ctx.replyWithMarkdown(infoText);
 
     if (userServer && !hasServerMess) {
         try {
