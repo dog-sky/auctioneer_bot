@@ -1,5 +1,6 @@
 require('dotenv').config()
 const axios  = require('axios');
+const debounce = require('debounce');
 const Telegraf = require('telegraf');
 const Markup = require('telegraf/markup')
 const Extra = require('telegraf/extra')
@@ -9,7 +10,7 @@ const bot = new Telegraf(process.env.API_KEY_BOT)
 const apiUrl = process.env.API_URL
 const apiMedia = process.env.API_MEDIA
 
-let userServer = null
+let userServer = false
 let hasServerMess = false
 
 bot.start(({ reply }) =>
@@ -21,58 +22,23 @@ bot.start(({ reply }) =>
     )
 )
 
-bot.on("text", async (ctx) => {
+bot.on('sticker', ctx => {
+    ctx.reply('После установки сервера нужно ввести название предмета')
+})
+
+bot.on('inline_query', (ctx) => {
+    debounce(inlineQuery(ctx), 3000)
+})
+
+bot.on('text', async (ctx) => {
     checkServer(ctx, ctx.message.text)
 
     if (userServer && !hasServerMess) {
         try {
             ctx.replyWithMarkdown("⌛️ Нужно немного подождать");
             const userText = ctx.message.text
-            const url = `${apiUrl}?item_name=${encodeURI(userText)}&region=eu&realm_name=${encodeURI(userServer)}`
+            messageQuery(ctx, userText, false)
 
-            const data = await getAucData(url)
-            const itemList = data.data.result.map(item => item.item_name)
-            const itemListLocal = itemList.map(item => item.ru_RU)
-            const uniqItem = [...new Set(itemListLocal)]
-
-            const specificItem = data.data.result.filter(product => {
-                return product.item_name.ru_RU.toUpperCase() === userText.toUpperCase()
-            })
-            if (specificItem.length > 0) {
-                const qlobalQty = specificItem.length
-                const itemId = specificItem[0].item.id
-                const price = setPrice(specificItem)
-                const maxPrice = price.maxPrice
-                const minPrice = price.minPrice
-                const itemQuality = HELPER.getItemRank(specificItem[0].quality)
-                const setItemQuality = itemQuality ? itemQuality : ''
-
-                const mediaUrl = `${apiMedia}/${itemId}`
-                const mediaData = await getAucData(mediaUrl)
-
-                if (mediaData) {
-                    ctx.replyWithPhoto(mediaData.data.assets[0].value)
-                }
-
-                ctx.reply(`${setItemQuality} Общее количество товара - ${qlobalQty} лот${HELPER.plural(qlobalQty, ['', 'а', 'ов'])}`).then(res => {
-                    ctx.reply(`Минимальная цена: ${minPrice.gold}🟡  ${minPrice.silver}⚪️  ${minPrice.copper}🟤`)
-                    ctx.reply(`Максимальная цена: ${maxPrice.gold}🟡  ${maxPrice.silver}⚪️  ${maxPrice.copper}🟤`)
-                })
-            } else {
-                ctx.reply(`Попробуйте сделать более точный запрос.`)
-                if (uniqItem.length > 1) {
-                    <!-- TODO: список кнопками -->
-                    // return ctx.reply('Вот что удалось найти', Extra.HTML().markup((m) =>
-                    //     m.inlineKeyboard([
-                    //         uniqItem.map(item => {
-                    //            return m.callbackButton(item, item)
-                    //         })
-                    //     ], {parse_mode: 'Markdown'})))
-                    ctx.reply(`Вот что удалось найти: ${uniqItem.join(', ')}`)
-                } else {
-                    ctx.reply(`Не удалось найти предметы по запросу ${userText}`)
-                }
-            }
         } catch (e) {
             ctx.reply('Не удалось получить ответ по такому запросу от сервера')
             ctx.reply(e)
@@ -127,6 +93,110 @@ const getAucData = async (url) => {
         return data
     } catch (e) {
         throw e;
+    }
+}
+
+async function inlineQuery (ctx) {
+    if (userServer) {
+        try {
+            const productData = await messageQuery(ctx, ctx.update.inline_query.query, true)
+            const title = productData.globalText ? productData.globalText : 'ничего не удалось найти'
+            const description = productData.maxPriceText ? `${productData.maxPriceText}\n\r${productData.minPriceText}` : ''
+            const thumb_url = productData.mediaData ? productData.mediaData.data.assets[0].value : ''
+            const payload = [
+                {
+                    'id': '001',
+                    'type': 'article',
+                    'title': title,
+                    'description': `${description}\n\r`,
+                    'thumb_url': thumb_url,
+                    'thumb_width': 163,
+                    'thumb_height': 182,
+                    'message_text': `${ctx.update.inline_query.query}\n\r${title}\n\r${description}`
+                }
+            ]
+            ctx.telegram.answerInlineQuery(ctx.inlineQuery.id, payload, {cache_time: 0})
+            ctx.answerInlineQuery(payload)
+        } catch (e) {
+            throw e;
+        }
+    } else {
+        const payload = [
+            {
+                'id': '001',
+                'type': 'article',
+                'title': 'Не установлен сервер для поиска предметов',
+                'description': `Установите сервер зайдя в бота`,
+                'message_text': `Установите сервер зайдя в бота'`
+            }
+        ]
+        ctx.telegram.answerInlineQuery(ctx.inlineQuery.id, payload)
+    }
+}
+
+async function messageQuery (ctx, userText, inline) {
+    try {
+        const url = `${apiUrl}?item_name=${encodeURI(userText)}&region=eu&realm_name=${encodeURI(userServer)}`
+
+        const data = await getAucData(url)
+        const itemList = data.data.result.map(item => item.item_name)
+        const itemListLocal = itemList.map(item => item.ru_RU)
+        const uniqItem = [...new Set(itemListLocal)]
+
+        const specificItem = data.data.result.filter(product => {
+            return product.item_name.ru_RU.toUpperCase() === userText.toUpperCase()
+        })
+        if (specificItem.length > 0) {
+            const globalQty = specificItem.length
+            const itemId = specificItem[0].item.id
+            const price = setPrice(specificItem)
+            const maxPrice = price.maxPrice
+            const minPrice = price.minPrice
+            const itemQuality = HELPER.getItemRank(specificItem[0].quality)
+            const setItemQuality = itemQuality ? itemQuality : ''
+
+            const mediaUrl = `${apiMedia}/${itemId}`
+            const mediaData = await getAucData(mediaUrl)
+            const globalText = `${setItemQuality} Общее количество товара - ${globalQty} лот${HELPER.plural(globalQty, ['', 'а', 'ов'])}`
+            const minPriceText = `Минимальная цена: ${minPrice.gold}🟡  ${minPrice.silver}⚪️`
+            const maxPriceText = `Максимальная цена: ${maxPrice.gold}🟡  ${maxPrice.silver}⚪️`
+
+
+            if (!inline && mediaData) {
+                ctx.replyWithPhoto(mediaData.data.assets[0].value)
+                ctx.reply(globalText).then(res => {
+                    ctx.reply(minPriceText)
+                    ctx.reply(maxPriceText)
+                })
+            } else {
+                const payload = {
+                    mediaData: mediaData,
+                    globalText: globalText,
+                    minPriceText: minPriceText,
+                    maxPriceText: maxPriceText
+                }
+                return payload
+            }
+
+        } else {
+            if (!inline) {
+                ctx.reply(`Попробуйте сделать более точный запрос.`)
+                if (uniqItem.length > 1) {
+                    <!-- TODO: список кнопками -->
+                    // return ctx.reply('Вот что удалось найти', Extra.HTML().markup((m) =>
+                    //     m.inlineKeyboard([
+                    //         uniqItem.map(item => {
+                    //            return m.callbackButton(item, item)
+                    //         })
+                    //     ], {parse_mode: 'Markdown'})))
+                    ctx.reply(`Вот что удалось найти: ${uniqItem.join(', ')}`)
+                }
+            } else {
+                return false
+            }
+        }
+    } catch (e) {
+        ctx.reply(`Не удалось найти предметы по запросу ${userText}`)
     }
 }
 bot.launch()
