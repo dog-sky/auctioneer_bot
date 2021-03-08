@@ -17,7 +17,7 @@ let hasServerMess = false
 
 bot.start(({ reply }) =>
     reply('Привет! Установи сервер для поиска, потом ищи предмет по названию.', Markup
-        .keyboard(SERVER_LIST.serverList, {columns: 2})
+        .keyboard(SERVER_LIST.serverList.sort(), {columns: 2})
         .oneTime()
         .resize()
         .extra()
@@ -25,7 +25,7 @@ bot.start(({ reply }) =>
 )
 
 bot.on('sticker', ctx => {
-    const text = userServer ? 'Введите название предмаета текстом' : 'Сначало нужно установить сервер, а потом ввести название нужного предмета'
+    const text = userServer ? 'Введите название предмаета текстом' : 'Сначала нужно установить сервер, а потом ввести название нужного предмета'
     ctx.reply(text)
 })
 
