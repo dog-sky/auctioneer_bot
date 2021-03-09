@@ -42,7 +42,7 @@ bot.on('text', async (ctx) => {
             try {
                 ctx.replyWithMarkdown("⌛️ Нужно немного подождать")
                 const userText = ctx.message.text
-                messageQuery(ctx, userText, false)
+                messageQuery(ctx, userText, false, hasServer)
 
             } catch (e) {
                 ctx.reply('Не удалось получить ответ по такому запросу от сервера')
@@ -104,9 +104,11 @@ const getAucData = async (url) => {
 }
 
 async function inlineQuery (ctx) {
-    if (userServer) {
+ client.get(ctx.from.id, async function(err, redisServer) {
+    const hasServer = redisServer ? redisServer : userServer
+    if (hasServer) {
         try {
-            const productData = await messageQuery(ctx, ctx.update.inline_query.query, true)
+            const productData = await messageQuery(ctx, ctx.update.inline_query.query, true, hasServer)
             const title = productData.globalText ? productData.globalText : 'ничего не удалось найти'
             const description = productData.maxPriceText ? `${productData.maxPriceText}\n\r${productData.minPriceText}` : ''
             const thumb_url = productData.mediaData ? productData.mediaData.data.assets[0].value : ''
@@ -139,12 +141,11 @@ async function inlineQuery (ctx) {
         ]
         ctx.telegram.answerInlineQuery(ctx.inlineQuery.id, payload)
     }
+ })
 }
 
-async function messageQuery (ctx, userText, inline) {
+async function messageQuery (ctx, userText, inline, hasUserServer) {
     try {
-        client.get(ctx.from.id, async function(err, redisServer) {
-            const hasUserServer = redisServer ? redisServer : userServer
             const url = `${apiUrl}?item_name=${encodeURI(userText)}&region=eu&realm_name=${encodeURI(hasUserServer)}`
 
             const data = await getAucData(url)
@@ -204,7 +205,6 @@ async function messageQuery (ctx, userText, inline) {
                     return false
                 }
             }
-        })
     } catch (e) {
         ctx.reply(`Не удалось найти предметы по запросу ${userText}`)
     }
