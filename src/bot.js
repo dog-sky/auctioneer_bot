@@ -24,9 +24,17 @@ bot.start(({ reply }) =>
     )
 )
 
+bot.on('callback_query', (ctx) => {
+    client.get(ctx.from.id, function(err, redisServer) {
+        messageQuery(ctx, ctx.callbackQuery.data, false, redisServer)
+    })
+})
+
 bot.on('sticker', ctx => {
-    const text = userServer ? 'Введите название предмаета текстом' : 'Сначала нужно установить сервер, а потом ввести название нужного предмета'
-    ctx.reply(text)
+    client.get(ctx.from.id, function(err, redisServer) {
+        const text = userServer || redisServer ? 'Введите название предмаета текстом' : 'Сначала нужно установить сервер, а потом ввести название нужного предмета'
+        ctx.reply(text)
+    })
 })
 
 bot.on('inline_query', (ctx) => {
@@ -192,14 +200,17 @@ async function messageQuery (ctx, userText, inline, hasUserServer) {
                 if (!inline) {
                     ctx.reply(`Попробуйте сделать более точный запрос.`)
                     if (uniqItem.length > 1) {
-                        <!-- TODO: список кнопками -->
-                        // return ctx.reply('Вот что удалось найти', Extra.HTML().markup((m) =>
-                        //     m.inlineKeyboard([
-                        //         uniqItem.map(item => {
-                        //            return m.callbackButton(item, item)
-                        //         })
-                        //     ], {parse_mode: 'Markdown'})))
-                        ctx.reply(`Вот что удалось найти: ${uniqItem.join(', ')}`)
+                        const size = 3
+                        let formatArrayButton = []
+                        for (let i = 0; i < Math.ceil(uniqItem.length/size); i++) {
+                            formatArrayButton[i] = uniqItem.slice((i*size), (i*size) + size)
+                        }
+                        const itemButton = formatArrayButton.map(buttonSet => {
+                           return buttonSet.map(item => {
+                                  return item = Markup.callbackButton(item, item)
+                            })
+                        })
+                        return ctx.reply('Вот что удалось найти', Extra.HTML().markup((m) => m.inlineKeyboard(itemButton, {parse_mode: 'Markdown'})))
                     }
                 } else {
                     return false
