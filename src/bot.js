@@ -98,13 +98,13 @@ function setPrice (item) {
     }
 }
 
-const getAucData = async (url) => {
+const getAucData = async (url, ctx) => {
     try {
         const data = await axios({
             method: 'get',
             url: url,
             timeout: 8000,
-        }).catch(() => [])
+        }).catch((e) => ctx.reply(e.response.data.message))
         return data
     } catch (e) {
         throw e
@@ -156,7 +156,7 @@ async function messageQuery (ctx, userText, inline, hasUserServer) {
     try {
             const url = `${apiUrl}?item_name=${encodeURI(userText)}&region=eu&realm_name=${encodeURI(hasUserServer)}`
 
-            const data = await getAucData(url)
+            const data = await getAucData(url, ctx)
             const itemList = data.data.result.map(item => item.item_name)
             const itemListLocal = itemList.map(item => item.ru_RU)
             const uniqItem = [...new Set(itemListLocal)]
@@ -178,14 +178,10 @@ async function messageQuery (ctx, userText, inline, hasUserServer) {
                 const globalText = `${setItemQuality} Общее количество товара - ${globalQty} лот${HELPER.plural(globalQty, ['', 'а', 'ов'])}`
                 const minPriceText = `Минимальная цена: ${minPrice.gold}🟡  ${minPrice.silver}⚪️`
                 const maxPriceText = `Максимальная цена: ${maxPrice.gold}🟡  ${maxPrice.silver}⚪️`
-
+                const payloadCaption = `${globalText}\n\r\n\r${minPriceText}\n\r${maxPriceText}`
 
                 if (!inline && mediaData) {
-                    ctx.replyWithPhoto(mediaData.data.assets[0].value)
-                    ctx.reply(globalText).then(res => {
-                        ctx.reply(minPriceText)
-                        ctx.reply(maxPriceText)
-                    })
+                    ctx.replyWithPhoto({filename: "", source: undefined, url: mediaData.data.assets[0].value}, {caption: payloadCaption});
                 } else {
                     const payload = {
                         mediaData: mediaData,
